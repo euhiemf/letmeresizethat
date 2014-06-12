@@ -9,12 +9,20 @@
 
 			@element = $(el)
 
-			@width = @element.outerWidth()
-			@height = @element.outerHeight()
+
+			@setmetrics()
 
 
 			@element.on('mousemove', @borderhover)
-			@element.on('mousedown', @borderfollowmouse)
+			@element.on('mousedown', @mousedown)
+			@element.on('mouseleave', @mouseleave)
+			$(document).on('mouseup', @moseup)
+
+
+		setmetrics: ->
+			
+			@width = @element.outerWidth()
+			@height = @element.outerHeight()
 
 
 		borderhover: (ev) =>
@@ -28,6 +36,7 @@
 				right: ev.offsetX >= @width - @settings.borderWidth
 				left: ev.offsetX <= @settings.borderWidth
 
+
 			colborder = sides.right or sides.left
 			rowborder = sides.bottom or sides.top
 
@@ -37,32 +46,86 @@
 
 					cursortype = if colborder then 'col-resize' else 'row-resize'
 
-					@element.css('cursor', cursortype)
+					$('html').css('cursor', cursortype)
 
-					@ishoverborder = true
 
 					@current_side = side for side, status of sides when status is true
 
 
+
+					@ishoverborder = true
+
+
 			else if @ishoverborder
 
-				@element.css('cursor', 'default')
+				@mouseleave()
+
+
+		mouseleave: =>
+
+			if not @borderisfollowing
+
+				$('html').css('cursor', 'default')
 				@ishoverborder = false
 
-		borderfollowmouse: (ev) =>
+
+		mousedown: (ev) =>
 
 			if @ishoverborder
+				# add pseudo element using the jss libary
+				console.log 'mouse down'
+
+				@initial_mousepos =
+					x: ev.clientX
+					y: ev.clientY
+
 				@borderisfollowing = true
 
-		setborderposition: (ev) =>
+		moseup: (ev) =>
+
+			console.log(@borderisfollowing)
+			if not @borderisfollowing then return false
+
+
+			@current_mousepos =
+				x: ev.clientX
+				y: ev.clientY
+
+			@resize()
+
+			@borderisfollowing = false
+
+		resize: ->
+
+			if not @initial_mousepos
+				console.log 'no initial moseposition was found'
+				return
+
+			@settings.sideCalculations[@current_side](@element, @initial_mousepos, @current_mousepos)
+
+			@setmetrics()
 
 
 
+	default_calculations =
+		top: (element, initial_mousepos, current_mousepos) ->
+			element.height element.height() + initial_mousepos.y - current_mousepos.y 
+			element.css 'margin-top', parseInt(element.css('margin-top')) - initial_mousepos.y + current_mousepos.y
+		bottom: (element, initial_mousepos, current_mousepos) ->
+			element.height element.height() + current_mousepos.y - initial_mousepos.y
+		right: (element, initial_mousepos, current_mousepos) ->
+			element.width element.width() + current_mousepos.x - initial_mousepos.x
+		left: (element, initial_mousepos, current_mousepos) ->
+			element.width element.width() + initial_mousepos.x - current_mousepos.x 
+			element.css 'margin-left', parseInt(element.css('margin-left')) - initial_mousepos.x + current_mousepos.x
 
-	$.fn.flexdagrid = (options) ->
+
+
+	$.fn.lmresize = (options) ->
 
 		defaults =
 			borderWidth: 4
+			sideCalculations: default_calculations
 
 		settings = $.extend(true, {}, defaults, options);
 
@@ -75,6 +138,7 @@
 
 		return @
 
+	$.fn.letmeresizethat = $.fn.lmresize
 
 
 )(jQuery)

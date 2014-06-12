@@ -2,21 +2,29 @@
   var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
   (function($) {
-    var Box;
+    var Box, default_calculations;
     Box = (function() {
       function Box(el, settings) {
         this.settings = settings;
-        this.borderfollowmouse = __bind(this.borderfollowmouse, this);
+        this.moseup = __bind(this.moseup, this);
+        this.mousedown = __bind(this.mousedown, this);
+        this.mouseleave = __bind(this.mouseleave, this);
         this.borderhover = __bind(this.borderhover, this);
         this.element = $(el);
-        this.width = this.element.outerWidth();
-        this.height = this.element.outerHeight();
+        this.setmetrics();
         this.element.on('mousemove', this.borderhover);
-        this.element.on('mousedown', this.borderfollowmouse);
+        this.element.on('mousedown', this.mousedown);
+        this.element.on('mouseleave', this.mouseleave);
+        $(document).on('mouseup', this.moseup);
       }
 
+      Box.prototype.setmetrics = function() {
+        this.width = this.element.outerWidth();
+        return this.height = this.element.outerHeight();
+      };
+
       Box.prototype.borderhover = function(ev) {
-        var colborder, cursortype, rowborder, side, sides, status, _results;
+        var colborder, cursortype, rowborder, side, sides, status;
         if (this.borderisfollowing) {
           return;
         }
@@ -31,36 +39,84 @@
         if (colborder || rowborder) {
           if (!this.ishoverborder) {
             cursortype = colborder ? 'col-resize' : 'row-resize';
-            this.element.css('cursor', cursortype);
-            this.ishoverborder = true;
-            _results = [];
+            $('html').css('cursor', cursortype);
             for (side in sides) {
               status = sides[side];
               if (status === true) {
-                _results.push(this.current_side = side);
+                this.current_side = side;
               }
             }
-            return _results;
+            return this.ishoverborder = true;
           }
         } else if (this.ishoverborder) {
-          this.element.css('cursor', 'default');
+          return this.mouseleave();
+        }
+      };
+
+      Box.prototype.mouseleave = function() {
+        if (!this.borderisfollowing) {
+          $('html').css('cursor', 'default');
           return this.ishoverborder = false;
         }
       };
 
-      Box.prototype.borderfollowmouse = function(ev) {
+      Box.prototype.mousedown = function(ev) {
         if (this.ishoverborder) {
+          console.log('mouse down');
+          this.initial_mousepos = {
+            x: ev.clientX,
+            y: ev.clientY
+          };
           return this.borderisfollowing = true;
         }
+      };
+
+      Box.prototype.moseup = function(ev) {
+        console.log(this.borderisfollowing);
+        if (!this.borderisfollowing) {
+          return false;
+        }
+        this.current_mousepos = {
+          x: ev.clientX,
+          y: ev.clientY
+        };
+        this.resize();
+        return this.borderisfollowing = false;
+      };
+
+      Box.prototype.resize = function() {
+        if (!this.initial_mousepos) {
+          console.log('no initial moseposition was found');
+          return;
+        }
+        this.settings.sideCalculations[this.current_side](this.element, this.initial_mousepos, this.current_mousepos);
+        return this.setmetrics();
       };
 
       return Box;
 
     })();
-    return $.fn.flexdagrid = function(options) {
+    default_calculations = {
+      top: function(element, initial_mousepos, current_mousepos) {
+        element.height(element.height() + initial_mousepos.y - current_mousepos.y);
+        return element.css('margin-top', parseInt(element.css('margin-top')) - initial_mousepos.y + current_mousepos.y);
+      },
+      bottom: function(element, initial_mousepos, current_mousepos) {
+        return element.height(element.height() + current_mousepos.y - initial_mousepos.y);
+      },
+      right: function(element, initial_mousepos, current_mousepos) {
+        return element.width(element.width() + current_mousepos.x - initial_mousepos.x);
+      },
+      left: function(element, initial_mousepos, current_mousepos) {
+        element.width(element.width() + initial_mousepos.x - current_mousepos.x);
+        return element.css('margin-left', parseInt(element.css('margin-left')) - initial_mousepos.x + current_mousepos.x);
+      }
+    };
+    $.fn.lmresize = function(options) {
       var defaults, settings;
       defaults = {
-        borderWidth: 4
+        borderWidth: 4,
+        sideCalculations: default_calculations
       };
       settings = $.extend(true, {}, defaults, options);
       this.each(function() {
@@ -69,6 +125,7 @@
       });
       return this;
     };
+    return $.fn.letmeresizethat = $.fn.lmresize;
   })(jQuery);
 
 }).call(this);
