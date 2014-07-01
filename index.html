@@ -5,18 +5,34 @@
 	<title>letmeresizethat demo</title>
 
 	<style>
-		#letmeresizethis {
+		.one {
+			border: 4px solid black;
+			width: 200px;
+			height: 100px;
+			margin: 40px;
+			margin-left: 100px;
+		}
+		.two {
 			border: 4px solid black;
 			width: 300px;
 			height: 200px;
 			margin: 40px;
 			margin-left: 500px;
 		}
+		.third {
+			border: 4px solid black;
+			width: 400px;
+			height: 300px;
+			margin: 40px;
+			margin-left: 800px;
+		}
 	</style>
 </head>
 <body>
 
-	<div id='letmeresizethis'></div>
+	<div class='letmeresizethis one'></div>
+	<div class='letmeresizethis two'></div>
+	<div class='letmeresizethis third'></div>
 
 	<script src='jquery-2.1.1.min.js'></script>
 	<script src='letmeresizethat.jquery.js'></script>
@@ -25,14 +41,11 @@
 
 		$(function () {
 
-			$('#letmeresizethis').lmresize({
-				sideCalculations: {
-					// right: function () {
-					// 	console.log(123);
-					// 	return;
-					// }
-				}
-			});
+			$('.one').lmresize({
+				connect: true
+			}).tothe('left').of('.two', {
+				connect: true
+			}).tothe('left').of('.third');
 
 		});
 
