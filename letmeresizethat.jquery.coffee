@@ -115,7 +115,7 @@
 
 			@borderisfollowing = false
 
-		resize: ->
+		resize: (trigger = true) ->
 
 			if not @initial_mousepos
 				console.log 'no initial moseposition was found'
@@ -127,14 +127,23 @@
 				@settings.sideCalculations[side](@element, @initial_mousepos, @current_mousepos)
 
 
-			for connection in @connections
-				$.extend connection.instance,
-					initial_mousepos: @initial_mousepos
-					current_mousepos: @current_mousepos
-					sides: [connection.side]
+			if trigger
+
+				for connection in @connections when @current_sides.indexOf(instance.opposite(connection.side)) >= 0
+
+					###
+
+					when the opposite of connection.side is in current_sides
+
+					###
+
+					$.extend connection.instance,
+						initial_mousepos: @initial_mousepos
+						current_mousepos: @current_mousepos
+						current_sides: [connection.side]
 
 
-				connection.instance.resize()
+					connection.instance.resize(false)
 
 			@setmetrics()
 
@@ -155,9 +164,28 @@
 
 
 	instance = 
+		opposite: (side) ->
+			switch side
+				when 'left' then 'right'
+				when 'right' then 'left'
+				when 'bottom' then 'top'
+				when 'top' then 'bottom'
+
+			
 		memory: []
 		connect: ->
+
 			console.log @memory
+
+			for spot in @memory
+				spot.connection.addConnection spot.of, spot.tothe	
+				spot.of.addConnection spot.connection, @opposite(spot.tothe)
+
+			@clear()
+
+		clear: ->
+
+			@memory = []
 			
 
 
@@ -182,19 +210,22 @@
 
 		if settings.isConnected
 
-			instance.memory[instance.memory.length - 1]['of'] = element
+			for spot, i in instance.memory when not spot.hasOwnProperty('of')
+				spot['of'] = element
 
-			
+
 		
 
 		getElement = of: (selector, options = {}) ->
 
-			instance.memory.push {
 
-				connection: element
-				tothe: @side
+			for side in @sides
 
-			}
+				instance.memory.push
+
+					connection: element
+					tothe: side
+
 
 			options.isConnected = true
 
@@ -204,8 +235,8 @@
 
 
 
-		getSide = tothe: (side) ->
-			getElement.side = side
+		getSide = tothe: (sides...) ->
+			getElement.sides = sides
 			
 			getElement
 

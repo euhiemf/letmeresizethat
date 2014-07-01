@@ -1,5 +1,6 @@
 (function() {
-  var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+  var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+    __slice = [].slice;
 
   (function($) {
     var Box, default_calculations, instance;
@@ -114,8 +115,11 @@
         return this.borderisfollowing = false;
       };
 
-      Box.prototype.resize = function() {
+      Box.prototype.resize = function(trigger) {
         var connection, side, _i, _j, _len, _len1, _ref, _ref1;
+        if (trigger == null) {
+          trigger = true;
+        }
         if (!this.initial_mousepos) {
           console.log('no initial moseposition was found');
           return;
@@ -125,15 +129,25 @@
           side = _ref[_i];
           this.settings.sideCalculations[side](this.element, this.initial_mousepos, this.current_mousepos);
         }
-        _ref1 = this.connections;
-        for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-          connection = _ref1[_j];
-          $.extend(connection.instance, {
-            initial_mousepos: this.initial_mousepos,
-            current_mousepos: this.current_mousepos,
-            sides: [connection.side]
-          });
-          connection.instance.resize();
+        if (trigger) {
+          _ref1 = this.connections;
+          for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+            connection = _ref1[_j];
+            if (!(this.current_sides.indexOf(instance.opposite(connection.side)) >= 0)) {
+              continue;
+            }
+
+            /*
+            
+            					when the opposite of connection.side is in current_sides
+             */
+            $.extend(connection.instance, {
+              initial_mousepos: this.initial_mousepos,
+              current_mousepos: this.current_mousepos,
+              current_sides: [connection.side]
+            });
+            connection.instance.resize(false);
+          }
         }
         return this.setmetrics();
       };
@@ -158,13 +172,36 @@
       }
     };
     instance = {
+      opposite: function(side) {
+        switch (side) {
+          case 'left':
+            return 'right';
+          case 'right':
+            return 'left';
+          case 'bottom':
+            return 'top';
+          case 'top':
+            return 'bottom';
+        }
+      },
       memory: [],
       connect: function() {
-        return console.log(this.memory);
+        var spot, _i, _len, _ref;
+        console.log(this.memory);
+        _ref = this.memory;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          spot = _ref[_i];
+          spot.connection.addConnection(spot.of, spot.tothe);
+          spot.of.addConnection(spot.connection, this.opposite(spot.tothe));
+        }
+        return this.clear();
+      },
+      clear: function() {
+        return this.memory = [];
       }
     };
     $.fn.lmresize = function(options) {
-      var defaults, element, getElement, getSide, settings;
+      var defaults, element, getElement, getSide, i, settings, spot, _i, _len, _ref;
       defaults = {
         borderWidth: 4,
         cornerSize: 10,
@@ -175,24 +212,37 @@
       settings = $.extend(true, {}, defaults, options);
       element = new Box(this, settings);
       if (settings.isConnected) {
-        instance.memory[instance.memory.length - 1]['of'] = element;
+        _ref = instance.memory;
+        for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+          spot = _ref[i];
+          if (!spot.hasOwnProperty('of')) {
+            spot['of'] = element;
+          }
+        }
       }
       getElement = {
         of: function(selector, options) {
+          var side, _j, _len1, _ref1;
           if (options == null) {
             options = {};
           }
-          instance.memory.push({
-            connection: element,
-            tothe: this.side
-          });
+          _ref1 = this.sides;
+          for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+            side = _ref1[_j];
+            instance.memory.push({
+              connection: element,
+              tothe: side
+            });
+          }
           options.isConnected = true;
           return $(selector).lmresize(options);
         }
       };
       getSide = {
-        tothe: function(side) {
-          getElement.side = side;
+        tothe: function() {
+          var sides;
+          sides = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+          getElement.sides = sides;
           return getElement;
         }
       };
